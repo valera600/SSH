@@ -88,8 +88,18 @@
     </content>
     <orderEntry type="jdk" jdkName="Android API 22 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" exported="" name="jzlib-1.1.2" level="project" />
+    <orderEntry type="library" exported="" name="bcpkix-jdk15on-1.50" level="project" />
+    <orderEntry type="library" exported="" name="maverick-legacy-client-1.6.7-all" level="project" />
+    <orderEntry type="library" exported="" name="bcprov-jdk15on-1.50" level="project" />
+    <orderEntry type="library" exported="" name="commons-logging-1.1.1" level="project" />
     <orderEntry type="library" exported="" name="support-annotations-22.1.1" level="project" />
     <orderEntry type="library" exported="" name="support-v4-22.1.1" level="project" />
     <orderEntry type="library" exported="" name="appcompat-v7-22.1.1" level="project" />
+    <orderEntry type="library" exported="" name="log4j-1.2.17" level="project" />
+    <orderEntry type="library" exported="" name="slf4j-log4j12-1.7.2" level="project" />
+    <orderEntry type="library" exported="" name="commons-vfs2-2.0" level="project" />
+    <orderEntry type="library" exported="" name="slf4j-api-1.7.2" level="project" />
+    <orderEntry type="library" exported="" name="oro-2.0.8" level="project" />
   </component>
 </module>
