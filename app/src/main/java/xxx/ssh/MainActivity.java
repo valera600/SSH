@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -59,38 +60,47 @@ public class MainActivity extends ActionBarActivity {
         btnLeft = (Button) findViewById(R.id.buttonLeft);
         btnLeftOff = (Button) findViewById(R.id.buttonLeftOff);
 
-        View.OnClickListener oclBtn = new View.OnClickListener() {
+        View.OnTouchListener oclBtn = new View.OnTouchListener() {
             @Override
-            public void onClick(View v) {
+            public boolean onTouch(View v, MotionEvent motionEvent) {
                 switch (v.getId()) {
                     case R.id.buttonUp:
-                        tvInfo.setText("1 2");
-                        up = true;
-                        break;
-                    case R.id.buttonUpOff:
-                        tvInfo.setText("0 2");
-                        up = false;
+                        switch (motionEvent.getAction()){
+                            case MotionEvent.ACTION_DOWN:
+                                tvInfo.setText("1 2");
+                                up = true;
+                                break;
+                            case MotionEvent.ACTION_UP:
+                            case MotionEvent.ACTION_CANCEL:
+                                tvInfo.setText("0 2");
+                                up = false;
+                                break;
+                        }
                         break;
                     case R.id.buttonLeft:
-                        tvInfo.setText("1 3");
-                        left = true;
-                        break;
-                    case R.id.buttonLeftOff:
-                        tvInfo.setText("0 3");
-                        left = false;
+                        switch (motionEvent.getAction()){
+                            case MotionEvent.ACTION_DOWN:
+                                tvInfo.setText("1 3");
+                                left = true;
+                                break;
+                            case MotionEvent.ACTION_UP:
+                            case MotionEvent.ACTION_CANCEL:
+                                tvInfo.setText("0 3");
+                                left = false;
+                                break;
+                        }
                         break;
                     default:
                         break;
                 }
                 Thread thr = new Thread(new ThreadSSH());
                 thr.start();
+                return false;
             }
         };
 
-        btnUp.setOnClickListener(oclBtn);
-        btnUpOff.setOnClickListener(oclBtn);
-        btnLeft.setOnClickListener(oclBtn);
-        btnLeftOff.setOnClickListener(oclBtn);
+        btnUp.setOnTouchListener(oclBtn);
+        btnLeft.setOnTouchListener(oclBtn);
 
         com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
                 + "Product : J2SSH Maverick\r\n"
