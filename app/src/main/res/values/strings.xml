@@ -3,5 +3,10 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
-    <string name="button">Push me!</string>
+    <string name="buttonConnect">Connect!</string>
+    <string name="buttonUp">UP!</string>
+    <string name="buttonLeft">LEFT!</string>
+    <string name="buttonUpOff">Up OFF!</string>
+    <string name="buttonLeftOff">Left OFF!</string>
+    <string name="buttonDisconnect">Disconnect</string>
 </resources>

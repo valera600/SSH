@@ -3,17 +3,27 @@ package xxx.ssh;
 import android.app.AlertDialog;
 import android.os.AsyncTask;
 import android.app.Activity;
+import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
+import com.maverick.ssh.ChannelOpenException;
 import com.maverick.ssh.PseudoTerminalModes;
+import com.maverick.ssh.Shell;
+import com.maverick.ssh.ShellProcess;
+import com.maverick.ssh.ShellTimeoutException;
 import com.maverick.ssh.SshAuthentication;
 import com.maverick.ssh.SshClient;
+import com.maverick.ssh.SshClientConnector;
 import com.maverick.ssh.SshConnector;
+import com.maverick.ssh.SshException;
+import com.maverick.ssh.SshIOException;
 import com.maverick.ssh.SshSession;
 import com.maverick.ssh1.Ssh1Client;
 import com.maverick.ssh2.Ssh2Context;
@@ -31,11 +41,57 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 public class MainActivity extends ActionBarActivity {
-
+    public SshClient ssh = null;
+    public boolean up = false;
+    public boolean left = false;
+    public TextView tvInfo;
+    Button btnUp = null;
+    Button btnLeft = null;
+    Button btnUpOff = null;
+    Button btnLeftOff = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        tvInfo = (TextView) findViewById(R.id.textView);
+        btnUp = (Button) findViewById(R.id.buttonUp);
+        btnUpOff = (Button) findViewById(R.id.buttonUpOff);
+        btnLeft = (Button) findViewById(R.id.buttonLeft);
+        btnLeftOff = (Button) findViewById(R.id.buttonLeftOff);
+
+        View.OnClickListener oclBtn = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                switch (v.getId()) {
+                    case R.id.buttonUp:
+                        tvInfo.setText("1 2");
+                        up = true;
+                        break;
+                    case R.id.buttonUpOff:
+                        tvInfo.setText("0 2");
+                        up = false;
+                        break;
+                    case R.id.buttonLeft:
+                        tvInfo.setText("1 3");
+                        left = true;
+                        break;
+                    case R.id.buttonLeftOff:
+                        tvInfo.setText("0 3");
+                        left = false;
+                        break;
+                    default:
+                        break;
+                }
+                Thread thr = new Thread(new ThreadSSH());
+                thr.start();
+            }
+        };
+
+        btnUp.setOnClickListener(oclBtn);
+        btnUpOff.setOnClickListener(oclBtn);
+        btnLeft.setOnClickListener(oclBtn);
+        btnLeftOff.setOnClickListener(oclBtn);
+
         com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
                 + "Product : J2SSH Maverick\r\n"
                 + "Licensee: home\r\n"
@@ -51,6 +107,7 @@ public class MainActivity extends ActionBarActivity {
                 + "3B14B770034FFF022CFB302939A700B04348B624CF1D741C\r\n"
                 + "6245D5119B975A2778590441933FA164275270BAB973A93D\r\n"
                 + "----END 3SP LICENSE----\r\n");
+
 
     }
 
@@ -76,23 +133,9 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    SocketTransport createTransport(String hostname, int port)
-    {
-        SocketTransport st = null;
-
-        try {
-            st = new SocketTransport(hostname, port);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return st;
-    }
-
     class MyTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
-
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
             try {
                 String hostname = "192.168.0.192";
@@ -104,28 +147,13 @@ public class MainActivity extends ActionBarActivity {
                 /**
                  * Create an SshConnector instance
                  */
-                SshConnector con = SshConnector.createInstance();
+                SshClientConnector con = SshConnector.createInstance();
 
-                // Verify server host keys using the users known_hosts file
-                //con.setKnownHosts(new ConsoleKnownHostsKeyVerification());
-
-                ((Ssh2Context)con.getContext(2)).setPreferredPublicKey("ssh-rsa");
                 /**
                  * Connect to the host
                  */
-
-                System.out.println("Connecting to " + hostname);
-
-                SocketTransport transport;
-                transport =  new SocketTransport(hostname, port);
-
-                System.out.println("Creating SSH client");
-
-                final SshClient ssh = con.connect(transport,
-                        username);
-
-
-                //((Ssh2Client)ssh).getAuthenticationMethods(username);
+                ssh = con.connect(new SocketTransport(hostname,
+                        port), username);
 
                 /**
                  * Determine the version
@@ -138,8 +166,7 @@ public class MainActivity extends ActionBarActivity {
                 /**
                  * Authenticate the user using password authentication
                  */
-                com.maverick.ssh.PasswordAuthentication pwd = new com.maverick.ssh.
-                        PasswordAuthentication();
+                com.maverick.ssh.PasswordAuthentication pwd = new com.maverick.ssh.PasswordAuthentication();
 
                 do {
                     System.out.print("Password: raspberry");
@@ -152,57 +179,74 @@ public class MainActivity extends ActionBarActivity {
                  */
                 if (ssh.isAuthenticated()) {
 
-                    // Some old SSH2 servers kill the connection after the first
-                    // session has closed and there are no other sessions started;
-                    // so to avoid this we create the first session and dont ever use it
-                    final SshSession session = ssh.openSessionChannel();
-
-                    // Use the newly added PseudoTerminalModes class to
-                    // turn off echo on the remote shell
-                    PseudoTerminalModes pty = new PseudoTerminalModes(ssh);
-                    pty.setTerminalMode(PseudoTerminalModes.ECHO, false);
-
-                    session.requestPseudoTerminal("vt100", 80, 24, 0, 0, pty);
-
-                    session.startShell();
-
-                    Thread t = new Thread() {
-                        public void run() {
-                            try {
-                                int read;
-                                while ((read = session.getInputStream().read()) > -1) {
-                                    System.out.write(read);
-                                    System.out.flush();
-                                }
-                            } catch (IOException ex) {
-                                ex.printStackTrace();
-                            }
-                        }
-                    };
-
-                    t.start();
-                    int read;
-//                        byte[] buf = new byte[4096];
-                    while((read = System.in.read()) > -1) {
-                        session.getOutputStream().write(read);
-
-                    }
-
+                    /**
+                     * Create a Shell
+                     */
+                    SshSession session = ssh.openSessionChannel();
+                    session.executeCommand("ls");
                     session.close();
                 }
+                //ssh.disconnect();
 
-                ssh.disconnect();
-            } catch(Throwable t) {
-                t.printStackTrace();
+            } catch (SshIOException e) {
+                e.printStackTrace();
+            } catch (ChannelOpenException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (SshException e) {
+                e.printStackTrace();
             }
-
             return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            super.onPostExecute(result);
+            tvInfo.setText("Connected!");
+        }
+    }
+
+    class ThreadSSH implements Runnable {
+
+        public void run() {
+            updateGPIO updGPIO = new updateGPIO();
+            Thread thr = new Thread(updGPIO);
+            thr.start();
+        }
+    }
+
+    class updateGPIO implements Runnable{
+        public void run(){
+            if(ssh.isAuthenticated()) {
+                try {
+                    SshSession session = ssh.openSessionChannel();
+                    if(up)
+                        session.executeCommand("echo 1 > /sys/class/gpio/gpio2/value");
+                    else
+                        session.executeCommand("echo 0 > /sys/class/gpio/gpio2/value");
+                    session.close();
+                    session = ssh.openSessionChannel();
+                    if(left)
+                        session.executeCommand("echo 1 > /sys/class/gpio/gpio3/value");
+                    else
+                        session.executeCommand("echo 0 > /sys/class/gpio/gpio3/value");
+                    session.close();
+                } catch (SshException | ChannelOpenException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
     public void onMyButtonClick(View view) {
         MyTask mt = new MyTask();
         mt.execute();
+    }
+
+    public void onDisconnectButtonClick(View view) {
+        ssh.disconnect();
+        tvInfo.setText("Disconnected!");
     }
 
 }

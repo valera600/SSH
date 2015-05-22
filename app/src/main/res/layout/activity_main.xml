@@ -12,11 +12,53 @@
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/button"
-        android:id="@+id/button"
+        android:text="@string/buttonConnect"
+        android:id="@+id/buttonConnect"
         android:layout_below="@+id/textView"
         android:layout_alignParentStart="true"
         android:clickable="true"
         android:onClick="onMyButtonClick" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonUp"
+        android:id="@+id/buttonUp"
+        android:layout_below="@+id/buttonConnect"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonLeft"
+        android:id="@+id/buttonLeft"
+        android:layout_alignBottom="@+id/buttonUp"
+        android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonUpOff"
+        android:id="@+id/buttonUpOff"
+        android:layout_below="@+id/buttonUp"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonLeftOff"
+        android:id="@+id/buttonLeftOff"
+        android:layout_alignBottom="@+id/buttonUpOff"
+        android:layout_alignStart="@+id/buttonLeft"
+        android:nestedScrollingEnabled="false" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonDisconnect"
+        android:id="@+id/buttonDisconnect"
+        android:layout_alignTop="@+id/buttonConnect"
+        android:layout_alignStart="@+id/buttonLeft"
+        android:onClick="onDisconnectButtonClick" />
 
 </RelativeLayout>
