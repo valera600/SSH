@@ -25,40 +25,40 @@
         android:text="@string/buttonUp"
         android:id="@+id/buttonUp"
         android:layout_below="@+id/buttonConnect"
-        android:layout_alignParentStart="true" />
+        android:layout_toStartOf="@+id/buttonRight" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/buttonLeft"
         android:id="@+id/buttonLeft"
-        android:layout_alignBottom="@+id/buttonUp"
+        android:layout_below="@+id/buttonUp"
+        android:layout_toStartOf="@+id/buttonDown" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonDown"
+        android:id="@+id/buttonDown"
+        android:layout_below="@+id/buttonLeft"
         android:layout_centerHorizontal="true" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/buttonUpOff"
-        android:id="@+id/buttonUpOff"
-        android:layout_below="@+id/buttonUp"
-        android:layout_alignParentStart="true" />
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/buttonLeftOff"
-        android:id="@+id/buttonLeftOff"
-        android:layout_alignBottom="@+id/buttonUpOff"
-        android:layout_alignStart="@+id/buttonLeft"
-        android:nestedScrollingEnabled="false" />
+        android:text="@string/buttonRight"
+        android:id="@+id/buttonRight"
+        android:nestedScrollingEnabled="false"
+        android:layout_above="@+id/buttonDown"
+        android:layout_toEndOf="@+id/buttonDown" />
 
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/buttonDisconnect"
         android:id="@+id/buttonDisconnect"
-        android:layout_alignTop="@+id/buttonConnect"
-        android:layout_alignStart="@+id/buttonLeft"
-        android:onClick="onDisconnectButtonClick" />
+        android:onClick="onDisconnectButtonClick"
+        android:layout_above="@+id/buttonUp"
+        android:layout_alignStart="@+id/buttonRight" />
 
 </RelativeLayout>

@@ -6,7 +6,7 @@
     <string name="buttonConnect">Connect!</string>
     <string name="buttonUp">UP!</string>
     <string name="buttonLeft">LEFT!</string>
-    <string name="buttonUpOff">Up OFF!</string>
-    <string name="buttonLeftOff">Left OFF!</string>
+    <string name="buttonDown">DOWN!</string>
+    <string name="buttonRight">RIGHT!</string>
     <string name="buttonDisconnect">Disconnect</string>
 </resources>

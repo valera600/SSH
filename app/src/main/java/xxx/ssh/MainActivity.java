@@ -1,12 +1,8 @@
 package xxx.ssh;
 
-import android.app.AlertDialog;
 import android.os.AsyncTask;
-import android.app.Activity;
-import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
-import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -15,10 +11,6 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.maverick.ssh.ChannelOpenException;
-import com.maverick.ssh.PseudoTerminalModes;
-import com.maverick.ssh.Shell;
-import com.maverick.ssh.ShellProcess;
-import com.maverick.ssh.ShellTimeoutException;
 import com.maverick.ssh.SshAuthentication;
 import com.maverick.ssh.SshClient;
 import com.maverick.ssh.SshClientConnector;
@@ -27,48 +19,42 @@ import com.maverick.ssh.SshException;
 import com.maverick.ssh.SshIOException;
 import com.maverick.ssh.SshSession;
 import com.maverick.ssh1.Ssh1Client;
-import com.maverick.ssh2.Ssh2Context;
 import com.sshtools.net.SocketTransport;
-import com.sshtools.publickey.ConsoleKnownHostsKeyVerification;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.util.Properties;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 
 public class MainActivity extends ActionBarActivity {
     public SshClient ssh = null;
     public boolean up = false;
     public boolean left = false;
+    public boolean down = false;
+    public boolean right = false;
     public TextView tvInfo;
     Button btnUp = null;
     Button btnLeft = null;
-    Button btnUpOff = null;
-    Button btnLeftOff = null;
+    Button btnDown = null;
+    Button btnRight = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         tvInfo = (TextView) findViewById(R.id.textView);
         btnUp = (Button) findViewById(R.id.buttonUp);
-        btnUpOff = (Button) findViewById(R.id.buttonUpOff);
+        btnDown = (Button) findViewById(R.id.buttonDown);
         btnLeft = (Button) findViewById(R.id.buttonLeft);
-        btnLeftOff = (Button) findViewById(R.id.buttonLeftOff);
+        btnRight = (Button) findViewById(R.id.buttonRight);
 
         View.OnTouchListener oclBtn = new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent motionEvent) {
                 switch (v.getId()) {
+                    //up
                     case R.id.buttonUp:
                         switch (motionEvent.getAction()){
                             case MotionEvent.ACTION_DOWN:
                                 tvInfo.setText("1 2");
-                                up = true;
+                                if(!down)
+                                    up = true;
                                 break;
                             case MotionEvent.ACTION_UP:
                             case MotionEvent.ACTION_CANCEL:
@@ -77,16 +63,48 @@ public class MainActivity extends ActionBarActivity {
                                 break;
                         }
                         break;
+                    //left
                     case R.id.buttonLeft:
                         switch (motionEvent.getAction()){
                             case MotionEvent.ACTION_DOWN:
                                 tvInfo.setText("1 3");
-                                left = true;
+                                if(!right)
+                                    left = true;
                                 break;
                             case MotionEvent.ACTION_UP:
                             case MotionEvent.ACTION_CANCEL:
                                 tvInfo.setText("0 3");
                                 left = false;
+                                break;
+                        }
+                        break;
+                    //down
+                    case R.id.buttonDown:
+                        switch (motionEvent.getAction()){
+                            case MotionEvent.ACTION_DOWN:
+                                tvInfo.setText("1 4");
+                                if(!up)
+                                    down = true;
+                                break;
+                            case MotionEvent.ACTION_UP:
+                            case MotionEvent.ACTION_CANCEL:
+                                tvInfo.setText("0 4");
+                                down = false;
+                                break;
+                        }
+                        break;
+                    //right
+                    case R.id.buttonRight:
+                        switch (motionEvent.getAction()){
+                            case MotionEvent.ACTION_DOWN:
+                                tvInfo.setText("1 17");
+                                if(!left)
+                                    right = true;
+                                break;
+                            case MotionEvent.ACTION_UP:
+                            case MotionEvent.ACTION_CANCEL:
+                                tvInfo.setText("0 17");
+                                right = false;
                                 break;
                         }
                         break;
@@ -101,6 +119,8 @@ public class MainActivity extends ActionBarActivity {
 
         btnUp.setOnTouchListener(oclBtn);
         btnLeft.setOnTouchListener(oclBtn);
+        btnDown.setOnTouchListener(oclBtn);
+        btnRight.setOnTouchListener(oclBtn);
 
         com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
                 + "Product : J2SSH Maverick\r\n"
@@ -230,17 +250,33 @@ public class MainActivity extends ActionBarActivity {
         public void run(){
             if(ssh.isAuthenticated()) {
                 try {
+                    //up
                     SshSession session = ssh.openSessionChannel();
                     if(up)
                         session.executeCommand("echo 1 > /sys/class/gpio/gpio2/value");
                     else
                         session.executeCommand("echo 0 > /sys/class/gpio/gpio2/value");
                     session.close();
+                    //left
                     session = ssh.openSessionChannel();
                     if(left)
                         session.executeCommand("echo 1 > /sys/class/gpio/gpio3/value");
                     else
                         session.executeCommand("echo 0 > /sys/class/gpio/gpio3/value");
+                    session.close();
+                    //down
+                    session = ssh.openSessionChannel();
+                    if(down)
+                        session.executeCommand("echo 1 > /sys/class/gpio/gpio4/value");
+                    else
+                        session.executeCommand("echo 0 > /sys/class/gpio/gpio4/value");
+                    session.close();
+                    //right
+                    session = ssh.openSessionChannel();
+                    if(right)
+                        session.executeCommand("echo 1 > /sys/class/gpio/gpio17/value");
+                    else
+                        session.executeCommand("echo 0 > /sys/class/gpio/gpio17/value");
                     session.close();
                 } catch (SshException | ChannelOpenException e) {
                     e.printStackTrace();
