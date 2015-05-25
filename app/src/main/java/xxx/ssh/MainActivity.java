@@ -89,7 +89,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 }
                 else
                 {
-                    manualControl = true;
                     btnUp.setVisibility(View.VISIBLE);
                     btnLeft.setVisibility(View.VISIBLE);
                     btnDown.setVisibility(View.VISIBLE);
@@ -97,6 +96,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     xzView.setVisibility(View.INVISIBLE);
                     zyView.setVisibility(View.INVISIBLE);
                     turnOffSensor();
+                    manualControl = true;
                     stopMotion();
                 }
             }
@@ -370,6 +370,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         turnOnSensor();
     }
 
+
+    //Использовать включение и выключение сенсоров, когда не ручной режим управления
     private void turnOnSensor()
     {
         if (!manualControl) {
