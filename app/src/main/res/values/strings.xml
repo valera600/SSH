@@ -9,4 +9,5 @@
     <string name="buttonDown">DOWN!</string>
     <string name="buttonRight">RIGHT!</string>
     <string name="buttonDisconnect">Disconnect</string>
+    <string name="buttonChangeTypeControl">type control</string>
 </resources>

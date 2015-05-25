@@ -1,8 +1,13 @@
 package xxx.ssh;
 
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.AsyncTask;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -16,24 +21,34 @@ import com.maverick.ssh.SshClient;
 import com.maverick.ssh.SshClientConnector;
 import com.maverick.ssh.SshConnector;
 import com.maverick.ssh.SshException;
-import com.maverick.ssh.SshIOException;
 import com.maverick.ssh.SshSession;
 import com.maverick.ssh1.Ssh1Client;
 import com.sshtools.net.SocketTransport;
 
 import java.io.IOException;
 
-public class MainActivity extends ActionBarActivity {
-    public SshClient ssh = null;
-    public boolean up = false;
-    public boolean left = false;
-    public boolean down = false;
-    public boolean right = false;
-    public TextView tvInfo;
-    Button btnUp = null;
-    Button btnLeft = null;
-    Button btnDown = null;
-    Button btnRight = null;
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    private SshClient ssh = null;
+    private boolean up = false;
+    private boolean left = false;
+    private boolean down = false;
+    private boolean right = false;
+    private boolean manualControl = true;
+    private boolean wasChanged = false;
+    private TextView tvInfo;
+    private Button btnUp = null;
+    private Button btnLeft = null;
+    private Button btnDown = null;
+    private Button btnRight = null;
+    private SensorManager msensorManager = null; //Менеджер сенсоров аппрата
+
+    private float[] rotationMatrix;     //Матрица поворота
+    private float[] accelData;           //Данные с акселерометра
+    private float[] magnetData;       //Данные геомагнитного датчика
+    private float[] OrientationData; //Матрица положения в пространстве
+
+    private TextView xzView;
+    private TextView zyView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -43,7 +58,51 @@ public class MainActivity extends ActionBarActivity {
         btnDown = (Button) findViewById(R.id.buttonDown);
         btnLeft = (Button) findViewById(R.id.buttonLeft);
         btnRight = (Button) findViewById(R.id.buttonRight);
+        Button btnTypeControl = (Button) findViewById(R.id.buttonChangeTypeControl);
+        Button btnConnect = (Button) findViewById(R.id.buttonConnect);
+        Button btnDisconnect = (Button) findViewById(R.id.buttonDisconnect);
 
+        msensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+
+        rotationMatrix = new float[16];
+        accelData = new float[3];
+        magnetData = new float[3];
+        OrientationData = new float[3];
+
+        xzView = (TextView) findViewById(R.id.tvY);  // Наши текстовые поля для вывода показаний
+        zyView = (TextView) findViewById(R.id.tvZ);  //
+
+        //листенер для смены управления
+        View.OnClickListener oclTypeControl = new View.OnClickListener() {
+            public void onClick(View v){
+                if(manualControl)
+                {
+                    manualControl = false;
+                    btnUp.setVisibility(View.INVISIBLE);
+                    btnLeft.setVisibility(View.INVISIBLE);
+                    btnDown.setVisibility(View.INVISIBLE);
+                    btnRight.setVisibility(View.INVISIBLE);
+                    turnOnSensor();
+                    xzView.setVisibility(View.VISIBLE);
+                    zyView.setVisibility(View.VISIBLE);
+                    stopMotion();
+                }
+                else
+                {
+                    manualControl = true;
+                    btnUp.setVisibility(View.VISIBLE);
+                    btnLeft.setVisibility(View.VISIBLE);
+                    btnDown.setVisibility(View.VISIBLE);
+                    btnRight.setVisibility(View.VISIBLE);
+                    xzView.setVisibility(View.INVISIBLE);
+                    zyView.setVisibility(View.INVISIBLE);
+                    turnOffSensor();
+                    stopMotion();
+                }
+            }
+        };
+
+        //листенер для ручного управления
         View.OnTouchListener oclBtn = new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent motionEvent) {
@@ -117,10 +176,31 @@ public class MainActivity extends ActionBarActivity {
             }
         };
 
+        View.OnClickListener oclDisconnect = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                    ssh.disconnect();
+                    tvInfo.setText("Disconnected!");
+            }
+        };
+
+
+        View.OnClickListener oclConnect = new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                MyTask mt = new MyTask();
+                mt.execute();
+            }
+        };
+
         btnUp.setOnTouchListener(oclBtn);
         btnLeft.setOnTouchListener(oclBtn);
         btnDown.setOnTouchListener(oclBtn);
         btnRight.setOnTouchListener(oclBtn);
+
+        btnTypeControl.setOnClickListener(oclTypeControl);
+        btnConnect.setOnClickListener(oclConnect);
+        btnDisconnect.setOnClickListener(oclDisconnect);
 
         com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
                 + "Product : J2SSH Maverick\r\n"
@@ -163,7 +243,8 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    class MyTask extends AsyncTask<Void, Void, Void> {
+    //connection
+    private class MyTask extends AsyncTask<Void, Void, Void> {
         @Override
         protected Void doInBackground(Void... params) {
 
@@ -218,13 +299,7 @@ public class MainActivity extends ActionBarActivity {
                 }
                 //ssh.disconnect();
 
-            } catch (SshIOException e) {
-                e.printStackTrace();
-            } catch (ChannelOpenException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (SshException e) {
+            } catch (SshException | IOException | ChannelOpenException e) {
                 e.printStackTrace();
             }
             return null;
@@ -237,7 +312,7 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    class ThreadSSH implements Runnable {
+    private class ThreadSSH implements Runnable {
 
         public void run() {
             updateGPIO updGPIO = new updateGPIO();
@@ -246,7 +321,8 @@ public class MainActivity extends ActionBarActivity {
         }
     }
 
-    class updateGPIO implements Runnable{
+    private class updateGPIO extends Thread implements Runnable {
+
         public void run(){
             if(ssh.isAuthenticated()) {
                 try {
@@ -282,17 +358,134 @@ public class MainActivity extends ActionBarActivity {
                     e.printStackTrace();
                 }
             }
+            this.interrupt();
+        }
+
+    }
+
+    //orientation
+    @Override
+    protected void onResume() {
+        super.onResume();
+        turnOnSensor();
+    }
+
+    private void turnOnSensor()
+    {
+        if (!manualControl) {
+            msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
+            msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_UI);
         }
     }
 
-    public void onMyButtonClick(View view) {
-        MyTask mt = new MyTask();
-        mt.execute();
+    private void turnOffSensor()
+    {
+        if(!manualControl)
+            msensorManager.unregisterListener(this);
     }
 
-    public void onDisconnectButtonClick(View view) {
-        ssh.disconnect();
-        tvInfo.setText("Disconnected!");
+    @Override
+    protected void onPause() {
+        super.onPause();
+        turnOffSensor();
     }
 
+    private void loadNewSensorData(SensorEvent event) {
+        final int type = event.sensor.getType(); //Определяем тип датчика
+        if (type == Sensor.TYPE_ACCELEROMETER) { //Если акселерометр
+            accelData = event.values.clone();
+        }
+
+        if (type == Sensor.TYPE_MAGNETIC_FIELD) { //Если геомагнитный датчик
+            magnetData = event.values.clone();
+        }
+    }
+
+    public void onSensorChanged(SensorEvent event) {
+        loadNewSensorData(event); // Получаем данные с датчика
+        SensorManager.getRotationMatrix(rotationMatrix, null, accelData, magnetData); //Получаем матрицу поворота
+        SensorManager.getOrientation(rotationMatrix, OrientationData); //Получаем данные ориентации устройства в пространстве
+
+        //Выводим результат
+        long y = Math.round(Math.toDegrees(OrientationData[1]));
+        long z = Math.round(Math.toDegrees(OrientationData[2]));
+        xzView.setText(String.valueOf(y));
+        zyView.setText(String.valueOf(z));
+
+        //up
+        if (y >= 20) {
+            if (!up) {
+                wasChanged = true;
+                up = true;
+            }
+        }
+        //down
+        if (y <= -20)
+        {
+            if(!down)
+            {
+                wasChanged = true;
+                down = true;
+            }
+        }
+        //non up and non down
+        if(y > -20 && y < 20)
+        {
+            if(up || down)
+            {
+                wasChanged = true;
+                up = false;
+                down = false;
+            }
+        }
+        //right
+        if(z >= 20)
+        {
+            if(!right)
+            {
+                wasChanged = true;
+                right = true;
+            }
+        }
+        //left
+        if(z <= -20)
+        {
+            if(!left)
+            {
+                wasChanged = true;
+                left = true;
+            }
+        }
+        //non right and non left
+        if(z > -20 && z < 20)
+        {
+            if(left || right)
+            {
+                wasChanged = true;
+                left = false;
+                right = false;
+            }
+        }
+        //apply changes
+        if(wasChanged)
+        {
+            wasChanged = false;
+            Thread thr = new Thread(new ThreadSSH());
+            thr.start();
+        }
+    }
+
+    private void stopMotion()
+    {
+        up = false;
+        down = false;
+        left = false;
+        right = false;
+        Thread thr = new Thread(new ThreadSSH());
+        thr.start();
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { //Изменение точности показаний датчика
+    }
 }

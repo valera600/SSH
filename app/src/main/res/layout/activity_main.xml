@@ -16,8 +16,7 @@
         android:id="@+id/buttonConnect"
         android:layout_below="@+id/textView"
         android:layout_alignParentStart="true"
-        android:clickable="true"
-        android:onClick="onMyButtonClick" />
+        android:clickable="true" />
 
     <Button
         android:layout_width="wrap_content"
@@ -57,8 +56,32 @@
         android:layout_height="wrap_content"
         android:text="@string/buttonDisconnect"
         android:id="@+id/buttonDisconnect"
-        android:onClick="onDisconnectButtonClick"
         android:layout_above="@+id/buttonUp"
-        android:layout_alignStart="@+id/buttonRight" />
+        android:layout_alignParentEnd="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/tvY"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@+id/textView"
+        android:visibility="invisible" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/tvZ"
+        android:layout_centerVertical="true"
+        android:layout_toEndOf="@+id/tvY"
+        android:layout_marginStart="27dp"
+        android:visibility="invisible" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/buttonChangeTypeControl"
+        android:id="@+id/buttonChangeTypeControl"
+        android:layout_above="@+id/buttonUp"
+        android:layout_centerHorizontal="true" />
 
 </RelativeLayout>
