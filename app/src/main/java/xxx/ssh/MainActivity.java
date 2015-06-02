@@ -224,9 +224,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         View.OnClickListener oclConnect = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                MyTask mt = new MyTask();
-                mt.execute();
-                //timer.schedule(timerTask,0,timerPeriod);
+                try {
+                    MyTask mt = new MyTask();
+                    mt.execute();
+                    //timer.schedule(timerTask,0,timerPeriod);
+                }catch (Throwable t)
+                {
+                    Log.d(myErrorLogTag,t.toString());}
             }
         };
 
@@ -239,7 +243,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         btnConnect.setOnClickListener(oclConnect);
         btnDisconnect.setOnClickListener(oclDisconnect);
 
-        com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
+       com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
                 + "Product : J2SSH Maverick\r\n"
                 + "Licensee: home\r\n"
                 + "Comments: valera\r\n"
@@ -288,6 +292,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     }*/
 
+    private void toast(String str)
+    {
+        try {
+            Toast toast = Toast.makeText(getApplicationContext(),
+                    str, Toast.LENGTH_LONG);
+            toast.show();
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
+    }
+
     //connection
     private class MyTask extends AsyncTask<Void, Void, Void> {
         @Override
@@ -316,26 +331,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 com.maverick.ssh.PasswordAuthentication pwd = new com.maverick.ssh.PasswordAuthentication();
 
                 do {
-                    System.out.print("Password: raspberry");
                     pwd.setPassword("raspberry");
                 } while (ssh.authenticate(pwd) != SshAuthentication.COMPLETE
                         && ssh.isConnected());
 
-                /**
-                 * Start a session and do basic IO
-                 */
-                if (ssh.isAuthenticated()) {
-
-                    /**
-                     * Create a Shell*/
-
-                    SshSession session = ssh.openSessionChannel();
-                    session.executeCommand("ls");
-                    session.close();
-                }
-                //ssh.disconnect();
-
-            } catch (SshException | IOException | ChannelOpenException e) {
+            } catch (SshException | IOException e) {
                 Log.d(myErrorLogTag, e.toString());
             }
             return null;
@@ -343,11 +343,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         @Override
         protected void onPostExecute(Void result) {
-            super.onPostExecute(result);
-            tvInfo.setText("Connected!");
-            Toast toast = Toast.makeText(getApplicationContext(),
-                    "We are connected with Pi!", Toast.LENGTH_SHORT);
-            toast.show();
+            try {
+                super.onPostExecute(result);
+                tvInfo.setText("Connected!");
+                toast("We are connected with Pi!");
+            }
+            catch (Throwable t)
+            {Log.d(myErrorLogTag, t.toString());}
         }
     }
 
@@ -356,10 +358,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private String cmd;
 
         public void run() {
-            updateGPIO updGPIO = new updateGPIO();
-            updGPIO.cmd = cmd;
-            Thread thr = new Thread(updGPIO);
-            thr.start();
+            try {
+                updateGPIO updGPIO = new updateGPIO();
+                updGPIO.cmd = cmd;
+                Thread thr = new Thread(updGPIO);
+                thr.start();
+            }
+            catch (Throwable t)
+            {
+                Log.d(myErrorLogTag,t.toString());}
         }
     }
 
@@ -368,15 +375,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public String cmd;
 
         public void run(){
-            if(ssh.isAuthenticated()) {
-                try {
+            try {
+                if (ssh.isAuthenticated()) {
                     SshSession session = ssh.openSessionChannel();
                     session.executeCommand(cmd);
                     session.close();
-                } catch (SshException | ChannelOpenException e) {
+                }
+            }catch (SshException | ChannelOpenException e) {
                     Log.d(myErrorLogTag,e.toString());
                 }
-            }
             this.interrupt();
         }
 
@@ -440,41 +447,61 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //orientation
     @Override
     protected void onResume() {
-        super.onResume();
-        turnOnSensor();
+        try {
+            super.onResume();
+            turnOnSensor();
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
     }
 
 
     //Использовать включение и выключение сенсоров, когда не ручной режим управления
     private void turnOnSensor()
     {
-        if (!manualControl) {
-            msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
-            msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_UI);
-        }
+        try {
+            if (!manualControl) {
+                msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_UI);
+                msensorManager.registerListener(this, msensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_UI);
+            }
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
     }
 
     private void turnOffSensor()
     {
-        if(!manualControl)
-            msensorManager.unregisterListener(this);
+        try {
+            if (!manualControl)
+                msensorManager.unregisterListener(this);
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
     }
 
     @Override
     protected void onPause() {
-        super.onPause();
-        turnOffSensor();
+        try {
+            super.onPause();
+            turnOffSensor();
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
     }
 
     private void loadNewSensorData(SensorEvent event) {
-        final int type = event.sensor.getType(); //Определяем тип датчика
-        if (type == Sensor.TYPE_ACCELEROMETER) { //Если акселерометр
-            accelData = event.values.clone();
-        }
+        try {
+            final int type = event.sensor.getType(); //Определяем тип датчика
+            if (type == Sensor.TYPE_ACCELEROMETER) { //Если акселерометр
+                accelData = event.values.clone();
+            }
 
-        if (type == Sensor.TYPE_MAGNETIC_FIELD) { //Если геомагнитный датчик
-            magnetData = event.values.clone();
-        }
+            if (type == Sensor.TYPE_MAGNETIC_FIELD) { //Если геомагнитный датчик
+                magnetData = event.values.clone();
+            }
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag,t.toString());}
     }
 
     public void onSensorChanged(SensorEvent event) {
