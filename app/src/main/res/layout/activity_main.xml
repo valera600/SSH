@@ -59,23 +59,6 @@
         android:layout_above="@+id/buttonUp"
         android:layout_alignParentEnd="true" />
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvY"
-        android:layout_centerVertical="true"
-        android:layout_toEndOf="@+id/textView"
-        android:visibility="invisible" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/tvZ"
-        android:layout_centerVertical="true"
-        android:layout_toEndOf="@+id/tvY"
-        android:layout_marginStart="27dp"
-        android:visibility="invisible" />
-
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

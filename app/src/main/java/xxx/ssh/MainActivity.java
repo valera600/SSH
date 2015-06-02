@@ -1,6 +1,7 @@
 package xxx.ssh;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -8,12 +9,14 @@ import android.hardware.SensorManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.maverick.ssh.ChannelOpenException;
 import com.maverick.ssh.SshAuthentication;
@@ -22,13 +25,13 @@ import com.maverick.ssh.SshClientConnector;
 import com.maverick.ssh.SshConnector;
 import com.maverick.ssh.SshException;
 import com.maverick.ssh.SshSession;
-import com.maverick.ssh1.Ssh1Client;
 import com.sshtools.net.SocketTransport;
 
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SshClient ssh = null;
+    private String serverIp = "192.168.43.213";
     private boolean up = false;
     private boolean left = false;
     private boolean down = false;
@@ -41,6 +44,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button btnDown = null;
     private Button btnRight = null;
     private SensorManager msensorManager = null; //Менеджер сенсоров аппрата
+    private int borderAngle = 15;
+    private int anglePWM = 0;
+    private boolean changedSpeed = false;
+    private final String myErrorLogTag = "my error";
 
     private float[] rotationMatrix;     //Матрица поворота
     private float[] accelData;           //Данные с акселерометра
@@ -69,35 +76,31 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         magnetData = new float[3];
         OrientationData = new float[3];
 
-        xzView = (TextView) findViewById(R.id.tvY);  // Наши текстовые поля для вывода показаний
-        zyView = (TextView) findViewById(R.id.tvZ);  //
-
         //листенер для смены управления
-        View.OnClickListener oclTypeControl = new View.OnClickListener() {
+        final View.OnClickListener oclTypeControl = new View.OnClickListener() {
             public void onClick(View v){
-                if(manualControl)
-                {
-                    manualControl = false;
-                    btnUp.setVisibility(View.INVISIBLE);
-                    btnLeft.setVisibility(View.INVISIBLE);
-                    btnDown.setVisibility(View.INVISIBLE);
-                    btnRight.setVisibility(View.INVISIBLE);
-                    turnOnSensor();
-                    xzView.setVisibility(View.VISIBLE);
-                    zyView.setVisibility(View.VISIBLE);
-                    stopMotion();
+                try {
+                    if (manualControl) {
+                        manualControl = false;
+                        turnOnSensor();
+                        stopMotion();
+                    } else {
+                        btnUp.setText(R.string.buttonUp);
+                        btnLeft.setText(R.string.buttonLeft);
+                        btnDown.setText(R.string.buttonDown);
+                        btnRight.setText(R.string.buttonRight);
+                        btnUp.setTextColor(Color.BLACK);
+                        btnLeft.setTextColor(Color.BLACK);
+                        btnRight.setTextColor(Color.BLACK);
+                        btnDown.setTextColor(Color.BLACK);
+                        turnOffSensor();
+                        manualControl = true;
+                        stopMotion();
+                    }
                 }
-                else
+                catch (Throwable t)
                 {
-                    btnUp.setVisibility(View.VISIBLE);
-                    btnLeft.setVisibility(View.VISIBLE);
-                    btnDown.setVisibility(View.VISIBLE);
-                    btnRight.setVisibility(View.VISIBLE);
-                    xzView.setVisibility(View.INVISIBLE);
-                    zyView.setVisibility(View.INVISIBLE);
-                    turnOffSensor();
-                    manualControl = true;
-                    stopMotion();
+                    Log.d(myErrorLogTag, t.toString());
                 }
             }
         };
@@ -106,81 +109,94 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         View.OnTouchListener oclBtn = new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent motionEvent) {
-                switch (v.getId()) {
-                    //up
-                    case R.id.buttonUp:
-                        switch (motionEvent.getAction()){
-                            case MotionEvent.ACTION_DOWN:
-                                tvInfo.setText("1 2");
-                                if(!down)
-                                    up = true;
-                                break;
-                            case MotionEvent.ACTION_UP:
-                            case MotionEvent.ACTION_CANCEL:
-                                tvInfo.setText("0 2");
-                                up = false;
-                                break;
-                        }
-                        break;
-                    //left
-                    case R.id.buttonLeft:
-                        switch (motionEvent.getAction()){
-                            case MotionEvent.ACTION_DOWN:
-                                tvInfo.setText("1 3");
-                                if(!right)
-                                    left = true;
-                                break;
-                            case MotionEvent.ACTION_UP:
-                            case MotionEvent.ACTION_CANCEL:
-                                tvInfo.setText("0 3");
-                                left = false;
-                                break;
-                        }
-                        break;
-                    //down
-                    case R.id.buttonDown:
-                        switch (motionEvent.getAction()){
-                            case MotionEvent.ACTION_DOWN:
-                                tvInfo.setText("1 4");
-                                if(!up)
-                                    down = true;
-                                break;
-                            case MotionEvent.ACTION_UP:
-                            case MotionEvent.ACTION_CANCEL:
-                                tvInfo.setText("0 4");
-                                down = false;
-                                break;
-                        }
-                        break;
-                    //right
-                    case R.id.buttonRight:
-                        switch (motionEvent.getAction()){
-                            case MotionEvent.ACTION_DOWN:
-                                tvInfo.setText("1 17");
-                                if(!left)
-                                    right = true;
-                                break;
-                            case MotionEvent.ACTION_UP:
-                            case MotionEvent.ACTION_CANCEL:
-                                tvInfo.setText("0 17");
-                                right = false;
-                                break;
-                        }
-                        break;
-                    default:
-                        break;
+                try {
+                    switch (v.getId()) {
+                        //up
+                        case R.id.buttonUp:
+                            switch (motionEvent.getAction()) {
+                                case MotionEvent.ACTION_DOWN:
+                                    tvInfo.setText("1 2");
+                                    if (!down)
+                                        up = true;
+                                    break;
+                                case MotionEvent.ACTION_UP:
+                                case MotionEvent.ACTION_CANCEL:
+                                    tvInfo.setText("0 2");
+                                    up = false;
+                                    break;
+                            }
+                            break;
+                        //left
+                        case R.id.buttonLeft:
+                            switch (motionEvent.getAction()) {
+                                case MotionEvent.ACTION_DOWN:
+                                    tvInfo.setText("1 3");
+                                    if (!right)
+                                        left = true;
+                                    break;
+                                case MotionEvent.ACTION_UP:
+                                case MotionEvent.ACTION_CANCEL:
+                                    tvInfo.setText("0 3");
+                                    left = false;
+                                    break;
+                            }
+                            break;
+                        //down
+                        case R.id.buttonDown:
+                            switch (motionEvent.getAction()) {
+                                case MotionEvent.ACTION_DOWN:
+                                    tvInfo.setText("1 4");
+                                    if (!up)
+                                        down = true;
+                                    break;
+                                case MotionEvent.ACTION_UP:
+                                case MotionEvent.ACTION_CANCEL:
+                                    tvInfo.setText("0 4");
+                                    down = false;
+                                    break;
+                            }
+                            break;
+                        //right
+                        case R.id.buttonRight:
+                            switch (motionEvent.getAction()) {
+                                case MotionEvent.ACTION_DOWN:
+                                    tvInfo.setText("1 17");
+                                    if (!left)
+                                        right = true;
+                                    break;
+                                case MotionEvent.ACTION_UP:
+                                case MotionEvent.ACTION_CANCEL:
+                                    tvInfo.setText("0 17");
+                                    right = false;
+                                    break;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    Thread thr = new Thread(new ThreadSSH());
+                    thr.start();
+                } catch (Throwable t) {
+                    Log.d(myErrorLogTag, t.toString());
+                    return false;
                 }
-                Thread thr = new Thread(new ThreadSSH());
-                thr.start();
-                return false;
+                return true;
             }
         };
 
         View.OnClickListener oclDisconnect = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                try {
                     ssh.disconnect();
                     tvInfo.setText("Disconnected!");
+                    if(!manualControl)
+                        oclTypeControl.onClick(v);
+                }
+                catch (Throwable t)
+                {
+                    Log.d(myErrorLogTag, t.toString());
+                }
             }
         };
 
@@ -249,8 +265,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         protected Void doInBackground(Void... params) {
 
             try {
-                String hostname = "192.168.0.192";
-
                 int port = 22;
 
                 String username = "pi";
@@ -263,20 +277,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 /**
                  * Connect to the host
                  */
-                ssh = con.connect(new SocketTransport(hostname,
-                        port), username);
-
-                /**
-                 * Determine the version
-                 */
-                if (ssh instanceof Ssh1Client)
-                    System.out.println(hostname + " is an SSH1 server");
-                else
-                    System.out.println(hostname + " is an SSH2 server");
+                ssh = con.connect(new SocketTransport(serverIp,
+                        port), username, true);
 
                 /**
                  * Authenticate the user using password authentication
                  */
+
                 com.maverick.ssh.PasswordAuthentication pwd = new com.maverick.ssh.PasswordAuthentication();
 
                 do {
@@ -291,8 +298,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 if (ssh.isAuthenticated()) {
 
                     /**
-                     * Create a Shell
-                     */
+                     * Create a Shell*/
+
                     SshSession session = ssh.openSessionChannel();
                     session.executeCommand("ls");
                     session.close();
@@ -300,7 +307,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //ssh.disconnect();
 
             } catch (SshException | IOException | ChannelOpenException e) {
-                e.printStackTrace();
+                Log.d(myErrorLogTag, e.toString());
             }
             return null;
         }
@@ -309,6 +316,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         protected void onPostExecute(Void result) {
             super.onPostExecute(result);
             tvInfo.setText("Connected!");
+            Toast toast = Toast.makeText(getApplicationContext(),
+                    "We are connected with Pi!", Toast.LENGTH_SHORT);
+            toast.show();
         }
     }
 
@@ -326,36 +336,72 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         public void run(){
             if(ssh.isAuthenticated()) {
                 try {
-                    //up
-                    SshSession session = ssh.openSessionChannel();
-                    if(up)
-                        session.executeCommand("echo 1 > /sys/class/gpio/gpio2/value");
+                    SshSession session = null;
+                    if(manualControl)
+                    {
+                        //up
+                        session = ssh.openSessionChannel();
+                        if (up) {
+                            down = false;
+                            session.executeCommand("echo 1 > /sys/class/gpio/gpio2/value");
+                        }
+                        else
+                            session.executeCommand("echo 0 > /sys/class/gpio/gpio2/value");
+                        session.close();
+                        //down
+                        session = ssh.openSessionChannel();
+                        if (down) {
+                            up = false;
+                            session.executeCommand("echo 1 > /sys/class/gpio/gpio4/value");
+                        }
+                        else
+                            session.executeCommand("echo 0 > /sys/class/gpio/gpio4/value");
+                        session.close();
+                    }
                     else
-                        session.executeCommand("echo 0 > /sys/class/gpio/gpio2/value");
-                    session.close();
+                    {
+                        session = ssh.openSessionChannel();
+                        if(up)
+                        {
+                            down = false;
+                            session.executeCommand("echo 2 > /home/pi/onPWM");
+                        }
+                        if(down)
+                        {
+                            up = false;
+                            session.executeCommand("echo 4 > /home/pi/onPWM");
+                        }
+                        if((!up) && (!down))
+                        {
+                            session.executeCommand("echo 0 > /home/pi/onPWM");
+                        }
+                        session.close();
+                        if(up || down) {
+                            session = ssh.openSessionChannel();
+                            session.executeCommand("echo " + Integer.toString(anglePWM * 10) + " > /home/pi/delay");
+                            session.close();
+                        }
+                    }
                     //left
                     session = ssh.openSessionChannel();
-                    if(left)
+                    if(left) {
+                        right = false;
                         session.executeCommand("echo 1 > /sys/class/gpio/gpio3/value");
+                    }
                     else
                         session.executeCommand("echo 0 > /sys/class/gpio/gpio3/value");
                     session.close();
-                    //down
-                    session = ssh.openSessionChannel();
-                    if(down)
-                        session.executeCommand("echo 1 > /sys/class/gpio/gpio4/value");
-                    else
-                        session.executeCommand("echo 0 > /sys/class/gpio/gpio4/value");
-                    session.close();
                     //right
                     session = ssh.openSessionChannel();
-                    if(right)
+                    if(right) {
+                        left = false;
                         session.executeCommand("echo 1 > /sys/class/gpio/gpio17/value");
+                    }
                     else
                         session.executeCommand("echo 0 > /sys/class/gpio/gpio17/value");
                     session.close();
                 } catch (SshException | ChannelOpenException e) {
-                    e.printStackTrace();
+                    Log.d(myErrorLogTag,e.toString());
                 }
             }
             this.interrupt();
@@ -404,77 +450,90 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     public void onSensorChanged(SensorEvent event) {
-        loadNewSensorData(event); // Получаем данные с датчика
-        SensorManager.getRotationMatrix(rotationMatrix, null, accelData, magnetData); //Получаем матрицу поворота
-        SensorManager.getOrientation(rotationMatrix, OrientationData); //Получаем данные ориентации устройства в пространстве
+            try {
+                loadNewSensorData(event); // Получаем данные с датчика
+                SensorManager.getRotationMatrix(rotationMatrix, null, accelData, magnetData); //Получаем матрицу поворота
+                SensorManager.getOrientation(rotationMatrix, OrientationData); //Получаем данные ориентации устройства в пространстве
 
-        //Выводим результат
-        long y = Math.round(Math.toDegrees(OrientationData[1]));
-        long z = Math.round(Math.toDegrees(OrientationData[2]));
-        xzView.setText(String.valueOf(y));
-        zyView.setText(String.valueOf(z));
+                //Выводим результат
+                int y = (int) Math.round(Math.toDegrees(OrientationData[1]));
+                int z = (int) Math.round(Math.toDegrees(OrientationData[2]));
+                if(Math.abs(y) != anglePWM) {
+                    changedSpeed = true;    //скорость была изменена
+                    anglePWM = Math.abs(y);  //угол для ШИМ
+                }
+                btnUp.setText(Integer.toString(y));
+                btnDown.setText(Integer.toString(0 - y));
+                btnRight.setText(Integer.toString(z));
+                btnLeft.setText(Integer.toString(0 - z));
 
-        //up
-        if (y >= 20) {
-            if (!up) {
-                wasChanged = true;
-                up = true;
+                if(changedSpeed) {
+                    changedSpeed = false;
+                    //up
+                    if (y > 5) {
+                        down = false;
+                        up = true;
+                        wasChanged = true;
+                        btnUp.setTextColor(Color.GREEN);
+                        btnDown.setTextColor(Color.RED);
+                    }
+
+                    //down
+                    if (y < -5) {
+                        up = false;
+                        down = true;
+                        wasChanged = true;
+                        btnUp.setTextColor(Color.RED);
+                        btnDown.setTextColor(Color.GREEN);
+                    }
+
+                    //non up and non down
+                    if (y >= -5 && y <= 5) {
+                        wasChanged = true;
+                        up = false;
+                        down = false;
+                        btnUp.setTextColor(Color.BLACK);
+                        btnDown.setTextColor(Color.BLACK);
+                    }
+                }
+
+                //right
+                if (z >= borderAngle) {
+                    if (!right) {
+                        wasChanged = true;
+                        right = true;
+                        btnLeft.setTextColor(Color.RED);
+                        btnRight.setTextColor(Color.GREEN);
+                    }
+                }
+                //left
+                if (z <= -borderAngle) {
+                    if (!left) {
+                        wasChanged = true;
+                        left = true;
+                        btnLeft.setTextColor(Color.GREEN);
+                        btnRight.setTextColor(Color.RED);
+                    }
+                }
+                //non right and non left
+                if (z > -borderAngle && z < borderAngle) {
+                    if (left || right) {
+                        wasChanged = true;
+                        left = false;
+                        right = false;
+                        btnLeft.setTextColor(Color.BLACK);
+                        btnRight.setTextColor(Color.BLACK);
+                    }
+                }
+                //apply changes
+                if (wasChanged) {
+                    wasChanged = false;
+                    Thread thr = new Thread(new ThreadSSH());
+                    thr.start();
+                }
+            } catch (Throwable t) {
+                Log.d(myErrorLogTag, t.toString());
             }
-        }
-        //down
-        if (y <= -20)
-        {
-            if(!down)
-            {
-                wasChanged = true;
-                down = true;
-            }
-        }
-        //non up and non down
-        if(y > -20 && y < 20)
-        {
-            if(up || down)
-            {
-                wasChanged = true;
-                up = false;
-                down = false;
-            }
-        }
-        //right
-        if(z >= 20)
-        {
-            if(!right)
-            {
-                wasChanged = true;
-                right = true;
-            }
-        }
-        //left
-        if(z <= -20)
-        {
-            if(!left)
-            {
-                wasChanged = true;
-                left = true;
-            }
-        }
-        //non right and non left
-        if(z > -20 && z < 20)
-        {
-            if(left || right)
-            {
-                wasChanged = true;
-                left = false;
-                right = false;
-            }
-        }
-        //apply changes
-        if(wasChanged)
-        {
-            wasChanged = false;
-            Thread thr = new Thread(new ThreadSSH());
-            thr.start();
-        }
     }
 
     private void stopMotion()
@@ -483,8 +542,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         down = false;
         left = false;
         right = false;
-        Thread thr = new Thread(new ThreadSSH());
-        thr.start();
+        try {
+            if(ssh.isConnected()) {
+                Thread thr = new Thread(new ThreadSSH());
+                thr.start();
+            }
+        }
+        catch (Throwable t)
+        {
+            Log.d(myErrorLogTag, t.toString());
+        }
+
     }
 
     @Override
