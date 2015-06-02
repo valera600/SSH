@@ -28,6 +28,8 @@ import com.maverick.ssh.SshSession;
 import com.sshtools.net.SocketTransport;
 
 import java.io.IOException;
+//import java.util.Timer;
+//import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SshClient ssh = null;
@@ -36,6 +38,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean left = false;
     private boolean down = false;
     private boolean right = false;
+    private boolean lastUp = false;
+    private boolean lastDown = false;
+    private boolean lastLeft = false;
+    private boolean lastRight = false;
     private boolean manualControl = true;
     private boolean wasChanged = false;
     private TextView tvInfo;
@@ -47,7 +53,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private int borderAngle = 15;
     private int anglePWM = 0;
     private boolean changedSpeed = false;
+
+    //private Timer timer;
+    //private MyTimerTask timerTask;
+
     private final String myErrorLogTag = "my error";
+
+    private final int timerPeriod = 500;
 
     private final int GPIOPortUp = 2;
     private final int GPIOPortDown = 4;
@@ -73,6 +85,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Button btnTypeControl = (Button) findViewById(R.id.buttonChangeTypeControl);
         Button btnConnect = (Button) findViewById(R.id.buttonConnect);
         Button btnDisconnect = (Button) findViewById(R.id.buttonDisconnect);
+        //timer = new Timer();
+        //timerTask = new MyTimerTask();
 
         msensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
 
@@ -196,6 +210,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     tvInfo.setText("Disconnected!");
                     if(!manualControl)
                         oclTypeControl.onClick(v);
+                    //timer.cancel();
                     ssh.disconnect();
                 }
                 catch (Throwable t)
@@ -211,6 +226,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             public void onClick(View v) {
                 MyTask mt = new MyTask();
                 mt.execute();
+                //timer.schedule(timerTask,0,timerPeriod);
             }
         };
 
@@ -263,6 +279,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         return super.onOptionsItemSelected(item);
     }
+
+    /*class MyTimerTask extends TimerTask {
+
+        @Override
+        public void run() {
+            updateMotion();
+        }
+    }*/
 
     //connection
     private class MyTask extends AsyncTask<Void, Void, Void> {
@@ -369,26 +393,43 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     thrssh[i] = new ThreadSSH();
 
                 if(manualControl) {
-                    str = "echo " + Integer.toString(up ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortUp) + "/value";
-                    thrssh[0].cmd = str;
-                    thr[0] = new Thread(thrssh[0]);
-                    thr[0].start();
+                    //up
+                    if(up != lastUp)
+                    {
+                        str = "echo " + Integer.toString(up ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortUp) + "/value";
+                        thrssh[0].cmd = str;
+                        thr[0] = new Thread(thrssh[0]);
+                        thr[0].start();
+                        lastUp = up;
+                    }
 
-                    str = "echo " + Integer.toString(down ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortDown) + "/value";
-                    thrssh[1].cmd = str;
-                    thr[1] = new Thread(thrssh[1]);
-                    thr[1].start();
+                    //down
+                    if(down != lastDown) {
+                        str = "echo " + Integer.toString(down ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortDown) + "/value";
+                        thrssh[1].cmd = str;
+                        thr[1] = new Thread(thrssh[1]);
+                        thr[1].start();
+                        lastDown = down;
+                    }
                 }
 
-                str = "echo " + Integer.toString(left ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortLeft) + "/value";
-                thrssh[2].cmd = str;
-                thr[2] = new Thread(thrssh[2]);
-                thr[2].start();
+                //left
+                if(left != lastLeft) {
+                    str = "echo " + Integer.toString(left ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortLeft) + "/value";
+                    thrssh[2].cmd = str;
+                    thr[2] = new Thread(thrssh[2]);
+                    thr[2].start();
+                    lastLeft = left;
+                }
 
-                str = "echo " + Integer.toString(right ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortRight) + "/value";
-                thrssh[3].cmd = str;
-                thr[3] = new Thread(thrssh[3]);
-                thr[3].start();
+                //right
+                if(right != lastRight) {
+                    str = "echo " + Integer.toString(right ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortRight) + "/value";
+                    thrssh[3].cmd = str;
+                    thr[3] = new Thread(thrssh[3]);
+                    thr[3].start();
+                    lastRight = right;
+                }
             }
         }catch (Throwable t)
         {
@@ -445,7 +486,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 //Выводим результат
                 int y = (int) Math.round(Math.toDegrees(OrientationData[1]));
                 int z = (int) Math.round(Math.toDegrees(OrientationData[2]));
-                if(Math.abs(y) != anglePWM) {
+                if(Math.abs(Math.abs(y) - anglePWM) > 2) { //исключаем дрожание рук
                     changedSpeed = true;    //скорость была изменена
                     anglePWM = Math.abs(y);  //угол для ШИМ
                 }
@@ -498,7 +539,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if(up || down)
                     {
                         ThreadSSH thrsshAngle = new ThreadSSH();
-                        thrsshAngle.cmd = "echo " + Integer.toString(anglePWM*5) + " > /home/pi/delay";
+                        thrsshAngle.cmd = "echo " + Integer.toString(anglePWM*4) + " > /home/pi/delay";
                         Thread thr = new Thread(thrsshAngle);
                         thr.start();
                     }
