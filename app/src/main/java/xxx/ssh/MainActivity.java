@@ -49,6 +49,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private boolean changedSpeed = false;
     private final String myErrorLogTag = "my error";
 
+    private final int GPIOPortUp = 2;
+    private final int GPIOPortDown = 4;
+    private final int GPIOPortLeft = 3;
+    private final int GPIOPortRight = 17;
+
     private float[] rotationMatrix;     //Матрица поворота
     private float[] accelData;           //Данные с акселерометра
     private float[] magnetData;       //Данные геомагнитного датчика
@@ -174,8 +179,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         default:
                             break;
                     }
-                    Thread thr = new Thread(new ThreadSSH());
-                    thr.start();
+                    updateMotion();
                 } catch (Throwable t) {
                     Log.d(myErrorLogTag, t.toString());
                     return false;
@@ -188,10 +192,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             @Override
             public void onClick(View v) {
                 try {
-                    ssh.disconnect();
+                    stopMotion();
                     tvInfo.setText("Disconnected!");
                     if(!manualControl)
                         oclTypeControl.onClick(v);
+                    ssh.disconnect();
                 }
                 catch (Throwable t)
                 {
@@ -324,8 +329,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private class ThreadSSH implements Runnable {
 
+        private String cmd;
+
         public void run() {
             updateGPIO updGPIO = new updateGPIO();
+            updGPIO.cmd = cmd;
             Thread thr = new Thread(updGPIO);
             thr.start();
         }
@@ -333,72 +341,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     private class updateGPIO extends Thread implements Runnable {
 
+        public String cmd;
+
         public void run(){
             if(ssh.isAuthenticated()) {
                 try {
-                    SshSession session = null;
-                    if(manualControl)
-                    {
-                        //up
-                        session = ssh.openSessionChannel();
-                        if (up) {
-                            down = false;
-                            session.executeCommand("echo 1 > /sys/class/gpio/gpio2/value");
-                        }
-                        else
-                            session.executeCommand("echo 0 > /sys/class/gpio/gpio2/value");
-                        session.close();
-                        //down
-                        session = ssh.openSessionChannel();
-                        if (down) {
-                            up = false;
-                            session.executeCommand("echo 1 > /sys/class/gpio/gpio4/value");
-                        }
-                        else
-                            session.executeCommand("echo 0 > /sys/class/gpio/gpio4/value");
-                        session.close();
-                    }
-                    else
-                    {
-                        session = ssh.openSessionChannel();
-                        if(up)
-                        {
-                            down = false;
-                            session.executeCommand("echo 2 > /home/pi/onPWM");
-                        }
-                        if(down)
-                        {
-                            up = false;
-                            session.executeCommand("echo 4 > /home/pi/onPWM");
-                        }
-                        if((!up) && (!down))
-                        {
-                            session.executeCommand("echo 0 > /home/pi/onPWM");
-                        }
-                        session.close();
-                        if(up || down) {
-                            session = ssh.openSessionChannel();
-                            session.executeCommand("echo " + Integer.toString(anglePWM * 10) + " > /home/pi/delay");
-                            session.close();
-                        }
-                    }
-                    //left
-                    session = ssh.openSessionChannel();
-                    if(left) {
-                        right = false;
-                        session.executeCommand("echo 1 > /sys/class/gpio/gpio3/value");
-                    }
-                    else
-                        session.executeCommand("echo 0 > /sys/class/gpio/gpio3/value");
-                    session.close();
-                    //right
-                    session = ssh.openSessionChannel();
-                    if(right) {
-                        left = false;
-                        session.executeCommand("echo 1 > /sys/class/gpio/gpio17/value");
-                    }
-                    else
-                        session.executeCommand("echo 0 > /sys/class/gpio/gpio17/value");
+                    SshSession session = ssh.openSessionChannel();
+                    session.executeCommand(cmd);
                     session.close();
                 } catch (SshException | ChannelOpenException e) {
                     Log.d(myErrorLogTag,e.toString());
@@ -407,6 +356,44 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             this.interrupt();
         }
 
+    }
+
+    private void updateMotion()
+    {
+        try {
+            if(ssh.isAuthenticated()) {
+                ThreadSSH thrssh[] = new ThreadSSH[4];
+                Thread thr[] = new Thread[4];
+                String str;
+                for(int i = 0; i < 4; i++)
+                    thrssh[i] = new ThreadSSH();
+
+                if(manualControl) {
+                    str = "echo " + Integer.toString(up ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortUp) + "/value";
+                    thrssh[0].cmd = str;
+                    thr[0] = new Thread(thrssh[0]);
+                    thr[0].start();
+
+                    str = "echo " + Integer.toString(down ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortDown) + "/value";
+                    thrssh[1].cmd = str;
+                    thr[1] = new Thread(thrssh[1]);
+                    thr[1].start();
+                }
+
+                str = "echo " + Integer.toString(left ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortLeft) + "/value";
+                thrssh[2].cmd = str;
+                thr[2] = new Thread(thrssh[2]);
+                thr[2].start();
+
+                str = "echo " + Integer.toString(right ? 1 : 0) + " > /sys/class/gpio/gpio" + Integer.toString(GPIOPortRight) + "/value";
+                thrssh[3].cmd = str;
+                thr[3] = new Thread(thrssh[3]);
+                thr[3].start();
+            }
+        }catch (Throwable t)
+        {
+            Log.d(myErrorLogTag, t.toString());
+        }
     }
 
     //orientation
@@ -469,31 +456,51 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
                 if(changedSpeed) {
                     changedSpeed = false;
+                    String str;
+                    ThreadSSH thrssh = new ThreadSSH();
                     //up
                     if (y > 5) {
                         down = false;
                         up = true;
-                        wasChanged = true;
+                        str = "echo " + Integer.toString(GPIOPortUp) + " > /home/pi/onPWM";
+                        thrssh.cmd = str;
+                        Thread thr = new Thread(thrssh);
+                        thr.start();
                         btnUp.setTextColor(Color.GREEN);
                         btnDown.setTextColor(Color.RED);
+
                     }
 
                     //down
                     if (y < -5) {
                         up = false;
                         down = true;
-                        wasChanged = true;
+                        str = "echo " + Integer.toString(GPIOPortDown) + " > /home/pi/onPWM";
+                        thrssh.cmd = str;
+                        Thread thr = new Thread(thrssh);
+                        thr.start();
                         btnUp.setTextColor(Color.RED);
                         btnDown.setTextColor(Color.GREEN);
                     }
 
                     //non up and non down
                     if (y >= -5 && y <= 5) {
-                        wasChanged = true;
                         up = false;
                         down = false;
+                        str = "echo 0 > /home/pi/onPWM";
+                        thrssh.cmd = str;
+                        Thread thr = new Thread(thrssh);
+                        thr.start();
                         btnUp.setTextColor(Color.BLACK);
                         btnDown.setTextColor(Color.BLACK);
+                    }
+
+                    if(up || down)
+                    {
+                        ThreadSSH thrsshAngle = new ThreadSSH();
+                        thrsshAngle.cmd = "echo " + Integer.toString(anglePWM*5) + " > /home/pi/delay";
+                        Thread thr = new Thread(thrsshAngle);
+                        thr.start();
                     }
                 }
 
@@ -502,6 +509,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (!right) {
                         wasChanged = true;
                         right = true;
+                        left = false;
                         btnLeft.setTextColor(Color.RED);
                         btnRight.setTextColor(Color.GREEN);
                     }
@@ -511,6 +519,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if (!left) {
                         wasChanged = true;
                         left = true;
+                        right = false;
                         btnLeft.setTextColor(Color.GREEN);
                         btnRight.setTextColor(Color.RED);
                     }
@@ -525,11 +534,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                         btnRight.setTextColor(Color.BLACK);
                     }
                 }
-                //apply changes
+                //apply changes for left/right
                 if (wasChanged) {
                     wasChanged = false;
-                    Thread thr = new Thread(new ThreadSSH());
-                    thr.start();
+                    updateMotion();
                 }
             } catch (Throwable t) {
                 Log.d(myErrorLogTag, t.toString());
@@ -543,10 +551,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         left = false;
         right = false;
         try {
-            if(ssh.isConnected()) {
-                Thread thr = new Thread(new ThreadSSH());
-                thr.start();
-            }
+            updateMotion();
         }
         catch (Throwable t)
         {
