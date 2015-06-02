@@ -620,6 +620,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         right = false;
         try {
             updateMotion();
+            ThreadSSH thrssh = new ThreadSSH();
+            thrssh.cmd = "echo 0 > /home/pi/onPWM";
+            Thread thr = new Thread(thrssh);
+            thr.start();
         }
         catch (Throwable t)
         {
