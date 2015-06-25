@@ -377,7 +377,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 btnTypeControl.setVisibility(View.VISIBLE);
                 btnConnect.setVisibility(View.INVISIBLE);
                 ipEditText.setVisibility(View.INVISIBLE);
-                webView.loadUrl("file:///android_asset/cam.html?" + "192.168.0.192");
+                webView.loadUrl("file:///android_asset/cam.html?" + serverIp);
                 webView.setVisibility(View.VISIBLE);
             }
             catch (Throwable t)
