@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script>
+
+function monitor() {
+  console.log('monitor');
+  target = document.querySelector('img');
+  start();
+}
+
+function start() {
+  var get = location.search;
+  get = get.replace('?','');
+
+  console.log('start');
+  target.src = "http://"+get+":8081";
+}
+
+function finish() {
+  console.log('stop');
+  target.src = "";
+  // alternative -- stop all network loading on the page.
+  // window.stop();
+}
+
+</script>
+</head>
+
+<body onload="monitor()">
+<img style="width: 100%; height: 95%" >
+</body>
+</html>

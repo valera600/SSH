@@ -24,7 +24,8 @@
         android:text="@string/buttonUp"
         android:id="@+id/buttonUp"
         android:layout_below="@+id/buttonConnect"
-        android:layout_toStartOf="@+id/buttonRight" />
+        android:layout_toStartOf="@+id/buttonRight"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"
@@ -32,7 +33,8 @@
         android:text="@string/buttonLeft"
         android:id="@+id/buttonLeft"
         android:layout_below="@+id/buttonUp"
-        android:layout_toStartOf="@+id/buttonDown" />
+        android:layout_toStartOf="@+id/buttonDown"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"
@@ -40,7 +42,8 @@
         android:text="@string/buttonDown"
         android:id="@+id/buttonDown"
         android:layout_below="@+id/buttonLeft"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"
@@ -49,7 +52,8 @@
         android:id="@+id/buttonRight"
         android:nestedScrollingEnabled="false"
         android:layout_above="@+id/buttonDown"
-        android:layout_toEndOf="@+id/buttonDown" />
+        android:layout_toEndOf="@+id/buttonDown"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"
@@ -57,7 +61,8 @@
         android:text="@string/buttonDisconnect"
         android:id="@+id/buttonDisconnect"
         android:layout_above="@+id/buttonUp"
-        android:layout_alignParentEnd="true" />
+        android:layout_alignParentEnd="true"
+        android:visibility="invisible" />
 
     <Button
         android:layout_width="wrap_content"
@@ -65,6 +70,27 @@
         android:text="@string/buttonChangeTypeControl"
         android:id="@+id/buttonChangeTypeControl"
         android:layout_above="@+id/buttonUp"
-        android:layout_centerHorizontal="true" />
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:id="@+id/editIP"
+        android:inputType="date"
+        android:text="Enter IP"
+        android:layout_above="@+id/buttonLeft"
+        android:layout_alignParentStart="true" />
+
+    <WebView
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/webView"
+        android:layout_marginTop="64dp"
+        android:layout_below="@+id/buttonDown"
+        android:layout_alignEnd="@+id/buttonDisconnect"
+        android:layout_alignParentBottom="true"
+        android:visibility="invisible" />
 
 </RelativeLayout>

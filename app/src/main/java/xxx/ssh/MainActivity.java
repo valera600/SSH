@@ -14,9 +14,15 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import com.maverick.ssh.ChannelOpenException;
 import com.maverick.ssh.SshAuthentication;
@@ -33,7 +39,7 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SshClient ssh = null;
-    private String serverIp = "192.168.43.213";
+    private String serverIp = "";
     private boolean up = false;
     private boolean left = false;
     private boolean down = false;
@@ -49,10 +55,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private Button btnLeft = null;
     private Button btnDown = null;
     private Button btnRight = null;
+    private WebView webView = null;
+    Button btnTypeControl = null;
+    Button btnConnect = null;
+    Button btnDisconnect = null;
     private SensorManager msensorManager = null; //Менеджер сенсоров аппрата
     private int borderAngle = 15;
     private int anglePWM = 0;
     private boolean changedSpeed = false;
+    private EditText ipEditText;
 
     //private Timer timer;
     //private MyTimerTask timerTask;
@@ -75,193 +86,204 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView zyView;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        tvInfo = (TextView) findViewById(R.id.textView);
-        btnUp = (Button) findViewById(R.id.buttonUp);
-        btnDown = (Button) findViewById(R.id.buttonDown);
-        btnLeft = (Button) findViewById(R.id.buttonLeft);
-        btnRight = (Button) findViewById(R.id.buttonRight);
-        Button btnTypeControl = (Button) findViewById(R.id.buttonChangeTypeControl);
-        Button btnConnect = (Button) findViewById(R.id.buttonConnect);
-        Button btnDisconnect = (Button) findViewById(R.id.buttonDisconnect);
-        //timer = new Timer();
-        //timerTask = new MyTimerTask();
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.activity_main);
+            tvInfo = (TextView) findViewById(R.id.textView);
+            btnUp = (Button) findViewById(R.id.buttonUp);
+            btnDown = (Button) findViewById(R.id.buttonDown);
+            btnLeft = (Button) findViewById(R.id.buttonLeft);
+            btnRight = (Button) findViewById(R.id.buttonRight);
+            btnTypeControl = (Button) findViewById(R.id.buttonChangeTypeControl);
+            btnConnect = (Button) findViewById(R.id.buttonConnect);
+            btnDisconnect = (Button) findViewById(R.id.buttonDisconnect);
+            ipEditText = (EditText) findViewById(R.id.editIP);
+            webView = (WebView) findViewById(R.id.webView);
+            WebSettings webSettings = webView.getSettings();
+            webSettings.setJavaScriptEnabled(true);
+            //timer = new Timer();
+            //timerTask = new MyTimerTask();
 
-        msensorManager = (SensorManager)getSystemService(Context.SENSOR_SERVICE);
+            msensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
-        rotationMatrix = new float[16];
-        accelData = new float[3];
-        magnetData = new float[3];
-        OrientationData = new float[3];
+            rotationMatrix = new float[16];
+            accelData = new float[3];
+            magnetData = new float[3];
+            OrientationData = new float[3];
 
-        //листенер для смены управления
-        final View.OnClickListener oclTypeControl = new View.OnClickListener() {
-            public void onClick(View v){
-                try {
-                    if (manualControl) {
-                        manualControl = false;
-                        turnOnSensor();
-                        stopMotion();
-                    } else {
-                        btnUp.setText(R.string.buttonUp);
-                        btnLeft.setText(R.string.buttonLeft);
-                        btnDown.setText(R.string.buttonDown);
-                        btnRight.setText(R.string.buttonRight);
-                        btnUp.setTextColor(Color.BLACK);
-                        btnLeft.setTextColor(Color.BLACK);
-                        btnRight.setTextColor(Color.BLACK);
-                        btnDown.setTextColor(Color.BLACK);
-                        turnOffSensor();
-                        manualControl = true;
-                        stopMotion();
+            //листенер для смены управления
+            final View.OnClickListener oclTypeControl = new View.OnClickListener() {
+                public void onClick(View v) {
+                    try {
+                        if (manualControl) {
+                            manualControl = false;
+                            turnOnSensor();
+                            stopMotion();
+                        } else {
+                            btnUp.setText(R.string.buttonUp);
+                            btnLeft.setText(R.string.buttonLeft);
+                            btnDown.setText(R.string.buttonDown);
+                            btnRight.setText(R.string.buttonRight);
+                            btnUp.setTextColor(Color.BLACK);
+                            btnLeft.setTextColor(Color.BLACK);
+                            btnRight.setTextColor(Color.BLACK);
+                            btnDown.setTextColor(Color.BLACK);
+                            turnOffSensor();
+                            manualControl = true;
+                            stopMotion();
+                        }
+                    } catch (Throwable t) {
+                        Log.d(myErrorLogTag, t.toString());
                     }
                 }
-                catch (Throwable t)
-                {
-                    Log.d(myErrorLogTag, t.toString());
-                }
-            }
-        };
+            };
 
-        //листенер для ручного управления
-        View.OnTouchListener oclBtn = new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent motionEvent) {
-                try {
-                    switch (v.getId()) {
-                        //up
-                        case R.id.buttonUp:
-                            switch (motionEvent.getAction()) {
-                                case MotionEvent.ACTION_DOWN:
-                                    tvInfo.setText("1 2");
-                                    if (!down)
-                                        up = true;
-                                    break;
-                                case MotionEvent.ACTION_UP:
-                                case MotionEvent.ACTION_CANCEL:
-                                    tvInfo.setText("0 2");
-                                    up = false;
-                                    break;
-                            }
-                            break;
-                        //left
-                        case R.id.buttonLeft:
-                            switch (motionEvent.getAction()) {
-                                case MotionEvent.ACTION_DOWN:
-                                    tvInfo.setText("1 3");
-                                    if (!right)
-                                        left = true;
-                                    break;
-                                case MotionEvent.ACTION_UP:
-                                case MotionEvent.ACTION_CANCEL:
-                                    tvInfo.setText("0 3");
-                                    left = false;
-                                    break;
-                            }
-                            break;
-                        //down
-                        case R.id.buttonDown:
-                            switch (motionEvent.getAction()) {
-                                case MotionEvent.ACTION_DOWN:
-                                    tvInfo.setText("1 4");
-                                    if (!up)
-                                        down = true;
-                                    break;
-                                case MotionEvent.ACTION_UP:
-                                case MotionEvent.ACTION_CANCEL:
-                                    tvInfo.setText("0 4");
-                                    down = false;
-                                    break;
-                            }
-                            break;
-                        //right
-                        case R.id.buttonRight:
-                            switch (motionEvent.getAction()) {
-                                case MotionEvent.ACTION_DOWN:
-                                    tvInfo.setText("1 17");
-                                    if (!left)
-                                        right = true;
-                                    break;
-                                case MotionEvent.ACTION_UP:
-                                case MotionEvent.ACTION_CANCEL:
-                                    tvInfo.setText("0 17");
-                                    right = false;
-                                    break;
-                            }
-                            break;
-                        default:
-                            break;
+            //листенер для ручного управления
+            View.OnTouchListener oclBtn = new View.OnTouchListener() {
+                @Override
+                public boolean onTouch(View v, MotionEvent motionEvent) {
+                    try {
+                        switch (v.getId()) {
+                            //up
+                            case R.id.buttonUp:
+                                switch (motionEvent.getAction()) {
+                                    case MotionEvent.ACTION_DOWN:
+                                        tvInfo.setText("1 2");
+                                        if (!down)
+                                            up = true;
+                                        break;
+                                    case MotionEvent.ACTION_UP:
+                                    case MotionEvent.ACTION_CANCEL:
+                                        tvInfo.setText("0 2");
+                                        up = false;
+                                        break;
+                                }
+                                break;
+                            //left
+                            case R.id.buttonLeft:
+                                switch (motionEvent.getAction()) {
+                                    case MotionEvent.ACTION_DOWN:
+                                        tvInfo.setText("1 3");
+                                        if (!right)
+                                            left = true;
+                                        break;
+                                    case MotionEvent.ACTION_UP:
+                                    case MotionEvent.ACTION_CANCEL:
+                                        tvInfo.setText("0 3");
+                                        left = false;
+                                        break;
+                                }
+                                break;
+                            //down
+                            case R.id.buttonDown:
+                                switch (motionEvent.getAction()) {
+                                    case MotionEvent.ACTION_DOWN:
+                                        tvInfo.setText("1 4");
+                                        if (!up)
+                                            down = true;
+                                        break;
+                                    case MotionEvent.ACTION_UP:
+                                    case MotionEvent.ACTION_CANCEL:
+                                        tvInfo.setText("0 4");
+                                        down = false;
+                                        break;
+                                }
+                                break;
+                            //right
+                            case R.id.buttonRight:
+                                switch (motionEvent.getAction()) {
+                                    case MotionEvent.ACTION_DOWN:
+                                        tvInfo.setText("1 17");
+                                        if (!left)
+                                            right = true;
+                                        break;
+                                    case MotionEvent.ACTION_UP:
+                                    case MotionEvent.ACTION_CANCEL:
+                                        tvInfo.setText("0 17");
+                                        right = false;
+                                        break;
+                                }
+                                break;
+                            default:
+                                break;
+                        }
+                        updateMotion();
+                    } catch (Throwable t) {
+                        Log.d(myErrorLogTag, t.toString());
+                        return false;
                     }
-                    updateMotion();
-                } catch (Throwable t) {
-                    Log.d(myErrorLogTag, t.toString());
-                    return false;
+                    return true;
                 }
-                return true;
-            }
-        };
+            };
 
-        View.OnClickListener oclDisconnect = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    stopMotion();
-                    tvInfo.setText("Disconnected!");
-                    if(!manualControl)
-                        oclTypeControl.onClick(v);
-                    //timer.cancel();
-                    ssh.disconnect();
+            View.OnClickListener oclDisconnect = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        if (ssh != null && ssh.isConnected()) {
+                            stopMotion();
+                            if (!manualControl)
+                                oclTypeControl.onClick(v);
+                            //timer.cancel();
+                            ssh.disconnect();
+                        }
+                        ipEditText.setVisibility(View.VISIBLE);
+                        btnConnect.setVisibility(View.VISIBLE);
+                        btnDown.setVisibility(View.INVISIBLE);
+                        btnUp.setVisibility(View.INVISIBLE);
+                        btnLeft.setVisibility(View.INVISIBLE);
+                        btnRight.setVisibility(View.INVISIBLE);
+                        btnDisconnect.setVisibility(View.INVISIBLE);
+                        btnTypeControl.setVisibility(View.INVISIBLE);
+                        webView.setVisibility(View.INVISIBLE);
+                        tvInfo.setText("Disconnected!");
+                    } catch (Throwable t) {
+                        Log.d(myErrorLogTag, t.toString());
+                    }
                 }
-                catch (Throwable t)
-                {
-                    Log.d(myErrorLogTag, t.toString());
+            };
+
+
+            View.OnClickListener oclConnect = new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    try {
+                        serverIp = ipEditText.getText().toString();
+                        ipEditText.setVisibility(View.INVISIBLE);
+                        MyTask mt = new MyTask();
+                        mt.execute();
+                        //timer.schedule(timerTask,0,timerPeriod);
+                    } catch (Throwable t) {
+                        Log.d(myErrorLogTag, t.toString());
+                    }
                 }
-            }
-        };
+            };
 
+            btnUp.setOnTouchListener(oclBtn);
+            btnLeft.setOnTouchListener(oclBtn);
+            btnDown.setOnTouchListener(oclBtn);
+            btnRight.setOnTouchListener(oclBtn);
 
-        View.OnClickListener oclConnect = new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try {
-                    MyTask mt = new MyTask();
-                    mt.execute();
-                    //timer.schedule(timerTask,0,timerPeriod);
-                }catch (Throwable t)
-                {
-                    Log.d(myErrorLogTag,t.toString());}
-            }
-        };
+            btnTypeControl.setOnClickListener(oclTypeControl);
+            btnConnect.setOnClickListener(oclConnect);
+            btnDisconnect.setOnClickListener(oclDisconnect);
 
-        btnUp.setOnTouchListener(oclBtn);
-        btnLeft.setOnTouchListener(oclBtn);
-        btnDown.setOnTouchListener(oclBtn);
-        btnRight.setOnTouchListener(oclBtn);
-
-        btnTypeControl.setOnClickListener(oclTypeControl);
-        btnConnect.setOnClickListener(oclConnect);
-        btnDisconnect.setOnClickListener(oclDisconnect);
-
-       com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
-                + "Product : J2SSH Maverick\r\n"
-                + "Licensee: home\r\n"
-                + "Comments: valera\r\n"
-                + "Type    : Evaluation License\r\n"
-                + "Created : 20-May-2015\r\n"
-                + "Expires : 04-Jul-2015\r\n"
-                + "\r\n"
-                + "378720442AD7AFDBD9FF0D7E356DDB3726C8F941F73461DB\r\n"
-                + "9EA464FFDE8ED058DD243D641C0CA39A59C34D5F39DBF626\r\n"
-                + "4A6B7861CE00DE15D79180416149437F0466391277AD9C5F\r\n"
-                + "A6B99159B3B624F119190AE0EB84F693A7BEA5C942D96DA2\r\n"
-                + "3B14B770034FFF022CFB302939A700B04348B624CF1D741C\r\n"
-                + "6245D5119B975A2778590441933FA164275270BAB973A93D\r\n"
-                + "----END 3SP LICENSE----\r\n");
-
+            com.maverick.ssh.LicenseManager.addLicense("----BEGIN 3SP LICENSE----\r\n"
+                    + "Product : J2SSH Maverick\r\n"
+                    + "Licensee: home\r\n"
+                    + "Comments: valera\r\n"
+                    + "Type    : Evaluation License\r\n"
+                    + "Created : 20-May-2015\r\n"
+                    + "Expires : 04-Jul-2015\r\n"
+                    + "\r\n"
+                    + "378720442AD7AFDBD9FF0D7E356DDB3726C8F941F73461DB\r\n"
+                    + "9EA464FFDE8ED058DD243D641C0CA39A59C34D5F39DBF626\r\n"
+                    + "4A6B7861CE00DE15D79180416149437F0466391277AD9C5F\r\n"
+                    + "A6B99159B3B624F119190AE0EB84F693A7BEA5C942D96DA2\r\n"
+                    + "3B14B770034FFF022CFB302939A700B04348B624CF1D741C\r\n"
+                    + "6245D5119B975A2778590441933FA164275270BAB973A93D\r\n"
+                    + "----END 3SP LICENSE----\r\n");
 
     }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -347,6 +369,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 super.onPostExecute(result);
                 tvInfo.setText("Connected!");
                 toast("We are connected with Pi!");
+                btnDown.setVisibility(View.VISIBLE);
+                btnUp.setVisibility(View.VISIBLE);
+                btnLeft.setVisibility(View.VISIBLE);
+                btnRight.setVisibility(View.VISIBLE);
+                btnDisconnect.setVisibility(View.VISIBLE);
+                btnTypeControl.setVisibility(View.VISIBLE);
+                btnConnect.setVisibility(View.INVISIBLE);
+                ipEditText.setVisibility(View.INVISIBLE);
+                webView.loadUrl("file:///android_asset/cam.html?" + "192.168.0.192");
+                webView.setVisibility(View.VISIBLE);
             }
             catch (Throwable t)
             {Log.d(myErrorLogTag, t.toString());}
@@ -566,7 +598,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     if(up || down)
                     {
                         ThreadSSH thrsshAngle = new ThreadSSH();
-                        thrsshAngle.cmd = "echo " + Integer.toString(anglePWM*4) + " > /home/pi/delay";
+                        thrsshAngle.cmd = "echo " + Integer.toString(anglePWM*4+75) + " > /home/pi/delay";
                         Thread thr = new Thread(thrsshAngle);
                         thr.start();
                     }
